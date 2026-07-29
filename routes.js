@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { Readable } = require('stream');
 const { pool } = require('./database');
 const { redisClient } = require('./redis');
 const { extractTikTokData } = require('./tiktokService');
@@ -16,13 +17,13 @@ router.post('/download', apiLimiter, async (req, res) => {
     if (!url) return res.status(400).json({ success: false, error: "URL is required" });
 
     try {
-        // Check Cache
+        // Check Redis Cache first
         const cachedData = await redisClient.get(`tiktok:${url}`);
         if (cachedData) {
             return res.json({ success: true, data: JSON.parse(cachedData), source: 'cache' });
         }
 
-        // Fetch Data from Scraper Service
+        // Fetch Data from TikTok Scraper Service
         const videoData = await extractTikTokData(url);
 
         // Save Cache (Expires in 24 Hours)
@@ -44,7 +45,7 @@ router.post('/download', apiLimiter, async (req, res) => {
 });
 
 // ==========================================
-// 2. DIRECT FILE DOWNLOAD PROXY ROUTE
+// 2. DIRECT INSTANT STREAM DOWNLOAD PROXY
 // ==========================================
 router.get('/download-file', async (req, res) => {
     const videoUrl = req.query.url;
@@ -53,19 +54,28 @@ router.get('/download-file', async (req, res) => {
     if (!videoUrl) return res.status(400).send('Video URL is required');
 
     try {
-        const response = await fetch(videoUrl);
+        const response = await fetch(videoUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://www.tiktok.com/'
+            }
+        });
+
         if (!response.ok) throw new Error('Failed to fetch video stream');
 
         // Headers to force file download in browsers
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.setHeader('Content-Type', 'video/mp4');
 
-        const arrayBuffer = await response.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-        res.send(buffer);
+        // Instant Stream Pipe (No RAM buffering / Instant file download start)
+        const stream = Readable.fromWeb(response.body);
+        stream.pipe(res);
+
     } catch (error) {
         console.error('Download Stream Proxy Error:', error);
-        res.status(500).send('Error downloading video file.');
+        if (!res.headersSent) {
+            res.status(500).send('Error downloading video file.');
+        }
     }
 });
 
