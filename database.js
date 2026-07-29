@@ -2,15 +2,16 @@ const { Pool } = require('pg');
 require('dotenv').config();
 
 const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: process.env.DB_PORT,
+    user: process.env.DB_USER,
+    host: process.env.DB_HOST,
+    database: process.env.DB_NAME,
+    password: process.env.DB_PASSWORD,
+    port: process.env.DB_PORT || 5432,
+    ssl: { rejectUnauthorized: false } // Supabase ক্লাউড ডাটাবেসের জন্য এটি বাধ্যতামূলক
 });
 
 const initDB = async () => {
-  const query = `
+    const query = `
         CREATE TABLE IF NOT EXISTS admin (
             id SERIAL PRIMARY KEY, username VARCHAR(50) UNIQUE NOT NULL, 
             password VARCHAR(255) NOT NULL, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -38,12 +39,12 @@ const initDB = async () => {
             message TEXT, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
-  try {
-    await pool.query(query);
-    console.log("✅ PostgreSQL Tables Initialized");
-  } catch (err) {
-    console.error("❌ Database Init Error:", err);
-  }
+    try {
+        await pool.query(query);
+        console.log("✅ PostgreSQL Tables Initialized");
+    } catch (err) {
+        console.error("❌ Database Init Error:", err.message);
+    }
 };
 
 module.exports = { pool, initDB };
