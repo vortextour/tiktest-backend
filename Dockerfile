@@ -15,7 +15,7 @@ USER node
 COPY --chown=node:node package*.json ./
 
 # ৬. দ্রুত এবং পারফেক্ট ইনস্টলের জন্য npm ci ব্যবহার (dev dependencies বাদ দিয়ে)
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # ৭. বাকি সোর্স কোড কপি করা
 COPY --chown=node:node . .
