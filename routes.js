@@ -150,7 +150,10 @@ router.get('/stream/:token', videoStreamLimiter, asyncHandler(async (req, res) =
     const rawFilename = req.query.filename || 'TikSavePro_Video.mp4';
     const safeFilename = rawFilename.replace(/[^a-zA-Z0-9.\-_]/g, '');
     
-    res.setHeader('Content-Disposition', `attachment; filename="${safeFilename}"`);
+    // 🟢 মূল পরিবর্তন: ভিডিও প্লে (inline) এবং ডাউনলোডের (attachment) জন্য ডাইনামিক হেডার
+    const dispositionType = req.query.filename ? 'attachment' : 'inline';
+    
+    res.setHeader('Content-Disposition', `${dispositionType}; filename="${safeFilename}"`);
     res.setHeader('Content-Type', upstreamRes.headers.get('content-type') || 'video/mp4');
     
     ['content-length', 'content-range', 'accept-ranges'].forEach(header => {
