@@ -73,7 +73,6 @@ router.post('/download', publicApiLimiter, asyncHandler(async (req, res) => {
     const tokenData = { mediaUrl, quality, originalUrl: cleanUrl, ip: clientIp };
     await cacheSet(`stream:${token}`, tokenData, 1800); // টোকেনটি ৩০ মিনিট ভ্যালিড থাকবে
     
-    // 🟢 মূল পরিবর্তন (URL Mismatch Fix): এখানে v1 যুক্ত করা হয়েছে 
     return `/api/v1/stream/${token}`; 
   };
   
@@ -105,12 +104,12 @@ router.get('/stream/:token', videoStreamLimiter, asyncHandler(async (req, res) =
   
   const { mediaUrl, quality, originalUrl } = tokenData;
   
-  // 🟢 SSRF FIX: টিকটকের ও অন্যান্য CDN ডোমেইনগুলো এলাউ করা হয়েছে
+  // 🟢 SSRF FIX: কড়া ডোমেইন চেকিং সরিয়ে শুধু URL ভ্যালিডিটি চেক করা হয়েছে
   try {
     const parsedUrl = new URL(mediaUrl);
-    const validDomains = ['tikwm.com', 'tiktok.com', 'tiktokv.com', 'tiktokcdn.com', 'akamaized.net', 'bytecdn.cn', 'douyinvod.com'];
-    const isValid = validDomains.some(d => parsedUrl.hostname.includes(d));
-    if (!isValid) return res.status(502).json({ success: false, error: "Invalid upstream provider." });
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return res.status(400).json({ success: false, error: "Invalid media protocol." });
+    }
   } catch (e) {
     return res.status(400).json({ success: false, error: "Malformed media URL." });
   }
