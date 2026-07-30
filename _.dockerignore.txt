@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment Variables & Secrets
+.env
+.env.*
+*.pem
+
+# Git
+.git/
+.gitignore
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Documentation & Others
+README.md
+tests/
+coverage/
